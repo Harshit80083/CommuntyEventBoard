@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Events - Community Event Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <h1>🌱 Community Events</h1>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li id="addEventLink" style="display: none;"><a href="add-event.html">Add Event</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </div>
+    <div style="color: #fff; padding: 0 2rem; text-align: right;">
+      <p style="margin: 0; font-size: 0.9rem;">Welcome, <span id="userDisplay">User</span></p>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 class="page-title">My Attending Events</h2>
+
+    <div id="eventsContainer" class="events-grid">
+      <div class="loading">Loading your events...</div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    // check authentication on page load
+    window.addEventListener('load', function() {
+      let token = localStorage.getItem('authToken');
+      let userName = localStorage.getItem('userName');
+      let userRole = localStorage.getItem('userRole');
+      
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      document.getElementById('userDisplay').textContent = userName || 'User';
+      
+      if (userRole === 'admin') {
+        document.getElementById('addEventLink').style.display = 'block';
+      }
+      
+      loadMyEvents();
+    });
+    
+    function logout() {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      window.location.href = 'login.html';
+    }
+    
+    // load and display user's attending events
+    function loadMyEvents() {
+      let token = localStorage.getItem('authToken');
+      
+      fetch('/api/events/my-attending', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          displayEvents(data);
+        })
+        .catch(err => {
+          console.log('error loading events', err);
+          document.getElementById('eventsContainer').innerHTML = '<div class="empty-state"><h3>Error loading events</h3></div>';
+        });
+    }
+
+    function displayEvents(events) {
+      let container = document.getElementById('eventsContainer');
+      let token = localStorage.getItem('authToken');
+      let currentUserId = getCurrentUserId(token);
+      
+      if (events.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>You are not attending any events</h3><p>Join some events to see them here!</p></div>';
+        return;
+      }
+
+      let html = '';
+      
+      for (let i = 0; i < events.length; i++) {
+        let event = events[i];
+        
+        html += `
+          <div class="event-card" onclick="goToEvent('${event._id}')">
+            <span class="event-category">${event.category}</span>
+            <h3 class="event-title">${event.title}</h3>
+            <div class="event-date">${event.date}</div>
+            <div class="event-time">${event.time}</div>
+            <div class="event-location">${event.location}</div>
+            <p class="event-description">${event.description.substring(0, 100)}...</p>
+            <div class="event-attendees">👥 ${event.attendeeCount || event.attendees.length} attending</div>
+            <div class="event-buttons">
+              <button class="btn-danger" onclick="event.stopPropagation(); leaveEvent('${event._id}')">Leave</button>
+            </div>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+    }
+
+    function goToEvent(eventId) {
+      window.location.href = 'event-detail.html?id=' + eventId;
+    }
+
+    function leaveEvent(eventId) {
+      let token = localStorage.getItem('authToken');
+      
+      fetch('/api/events/' + eventId + '/leave', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          alert('You left the event');
+          loadMyEvents();
+        })
+        .catch(err => {
+          console.log('error leaving event', err);
+          alert('Error leaving event');
+        });
+    }
+    
+    function getCurrentUserId(token) {
+      if (!token) return null;
+      try {
+        let parts = token.split('.');
+        let payload = JSON.parse(atob(parts[1]));
+        return payload.id;
+      } catch (err) {
+        return null;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Event - Community Event Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <h1>🌱 Community Events</h1>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="my-events.html">My Events</a></li>
+        <li><a href="add-event.html">Add Event</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 class="page-title">Create a New Event</h2>
+
+    <div class="form-container">
+      <div id="messageBox"></div>
+      
+      <form id="eventForm">
+        <div class="form-group">
+          <label for="title">Event Title *</label>
+          <input type="text" id="title" name="title" placeholder="e.g., Community Cleanup Day" required>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description *</label>
+          <textarea id="description" name="description" placeholder="Describe your event in detail..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="date">Date *</label>
+          <input type="date" id="date" name="date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="time">Time</label>
+          <input type="time" id="time" name="time">
+        </div>
+
+        <div class="form-group">
+          <label for="location">Location *</label>
+          <input type="text" id="location" name="location" placeholder="e.g., Central Park, Building 5" required>
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category *</label>
+          <select id="category" name="category" required>
+            <option value="">Select a category</option>
+            <option value="Environmental">Environmental</option>
+            <option value="Technology">Technology</option>
+            <option value="Charity">Charity</option>
+            <option value="Sports">Sports</option>
+            <option value="Music">Music</option>
+            <option value="Food">Food</option>
+            <option value="Art">Art</option>
+            <option value="Education">Education</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%;">Create Event</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // check authentication
+    window.addEventListener('load', function() {
+      let token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = 'login.html';
+      }
+    });
+    
+    function logout() {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      window.location.href = 'login.html';
+    }
+    
+    // handle form submission
+    document.getElementById('eventForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      let title = document.getElementById('title').value;
+      let description = document.getElementById('description').value;
+      let date = document.getElementById('date').value;
+      let time = document.getElementById('time').value;
+      let location = document.getElementById('location').value;
+      let category = document.getElementById('category').value;
+      
+      // simple validation
+      if (!title || title.trim() === '') {
+        showMessage('Title is required', 'error');
+        return;
+      }
+      
+      if (!description || description.trim() === '') {
+        showMessage('Description is required', 'error');
+        return;
+      }
+      
+      if (!date) {
+        showMessage('Date is required', 'error');
+        return;
+      }
+      
+      if (!location || location.trim() === '') {
+        showMessage('Location is required', 'error');
+        return;
+      }
+      
+      if (!category) {
+        showMessage('Category is required', 'error');
+        return;
+      }
+      
+      // prepare data
+      let eventData = {
+        title: title,
+        description: description,
+        date: date,
+        time: time || '00:00',
+        location: location,
+        category: category
+      };
+      
+      let token = localStorage.getItem('authToken');
+      
+      // send to backend
+      fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(eventData)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            showMessage(data.error, 'error');
+          } else {
+            showMessage('Event created successfully! Redirecting...', 'success');
+            
+            // clear form
+            document.getElementById('eventForm').reset();
+            
+            // redirect to home after 1.5 seconds
+            setTimeout(function() {
+              window.location.href = 'index.html';
+            }, 1500);
+          }
+        })
+        .catch(err => {
+          console.log('error creating event', err);
+          showMessage('Error creating event. Please try again.', 'error');
+        });
+    });
+    
+    function showMessage(msg, type) {
+      let messageBox = document.getElementById('messageBox');
+      let className = type === 'error' ? 'form-error' : 'form-success';
+      messageBox.innerHTML = '<div class="' + className + '">' + msg + '</div>';
+    }
+  </script>
+</body>
+</html>

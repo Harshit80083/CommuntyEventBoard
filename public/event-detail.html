@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Details - Community Event Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <h1>🌱 Community Events</h1>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="my-events.html">My Events</a></li>
+        <li id="addEventLink" style="display: none;"><a href="add-event.html">Add Event</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="eventContainer" class="event-detail">
+      <div class="loading">Loading event...</div>
+    </div>
+  </div>
+
+  <script>
+    // get event id from URL
+    function getEventIdFromUrl() {
+      let params = new URLSearchParams(window.location.search);
+      let id = params.get('id');
+      return id;
+    }
+
+    // load event details
+    function loadEventDetail() {
+      let token = localStorage.getItem('authToken');
+      let userRole = localStorage.getItem('userRole');
+      
+      if (userRole === 'admin') {
+        document.getElementById('addEventLink').style.display = 'block';
+      }
+      
+      let eventId = getEventIdFromUrl();
+      
+      if (!eventId) {
+        document.getElementById('eventContainer').innerHTML = '<div class="empty-state"><h3>Event not found</h3></div>';
+        return;
+      }
+      
+      fetch('/api/events/' + eventId, {
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            document.getElementById('eventContainer').innerHTML = '<div class="empty-state"><h3>Event not found</h3></div>';
+          } else {
+            displayEventDetail(data, token, userRole);
+          }
+        })
+        .catch(err => {
+          console.log('error loading event', err);
+          document.getElementById('eventContainer').innerHTML = '<div class="empty-state"><h3>Error loading event</h3></div>';
+        });
+    }
+
+    function displayEventDetail(event, token, userRole) {
+      let container = document.getElementById('eventContainer');
+      let currentUserId = getCurrentUserId(token);
+      let isCreator = event.createdBy._id === currentUserId;
+      let isAdmin = userRole === 'admin';
+      let isAttending = false;
+      
+      for (let j = 0; j < event.attendees.length; j++) {
+        if (event.attendees[j]._id === currentUserId) {
+          isAttending = true;
+          break;
+        }
+      }
+      
+      let buttonsHtml = '<button class="btn-primary" onclick="window.location.href=\'index.html\'">Back to Home</button>';
+      
+      if (token) {
+        if (isAttending) {
+          buttonsHtml = '<button class="btn-danger" onclick="leaveEvent(\'' + event._id + '\')">Leave Event</button>' + buttonsHtml;
+        } else {
+          buttonsHtml = '<button class="btn-primary" onclick="joinEvent(\'' + event._id + '\')">Join Event</button>' + buttonsHtml;
+        }
+        
+        if (isCreator || isAdmin) {
+          buttonsHtml = '<button class="btn-secondary" onclick="editEvent(\'' + event._id + '\')">Edit Event</button><button class="btn-danger" onclick="deleteEvent(\'' + event._id + '\')">Delete Event</button>' + buttonsHtml;
+        }
+      }
+      
+      let html = `
+        <h2>${event.title}</h2>
+        <span class="event-category">${event.category}</span>
+        
+        <div class="detail-info">
+          <div class="detail-info-row">
+            <div class="detail-info-label">📅 Date:</div>
+            <div class="detail-info-value">${event.date}</div>
+          </div>
+          
+          <div class="detail-info-row">
+            <div class="detail-info-label">🕐 Time:</div>
+            <div class="detail-info-value">${event.time || 'TBA'}</div>
+          </div>
+          
+          <div class="detail-info-row">
+            <div class="detail-info-label">📍 Location:</div>
+            <div class="detail-info-value">${event.location}</div>
+          </div>
+          
+          <div class="detail-info-row">
+            <div class="detail-info-label">👥 Attendees:</div>
+            <div class="detail-info-value">${event.attendees.map(a => a.name).join(', ')} (${event.attendees.length} people)</div>
+          </div>
+        </div>
+        
+        <h3 style="color: #2d5f4f; margin-top: 2rem; margin-bottom: 1rem;">About This Event</h3>
+        <p class="detail-description">${event.description}</p>
+        
+        <div class="detail-buttons">
+          ${buttonsHtml}
+        </div>
+      `;
+      
+      container.innerHTML = html;
+    }
+
+    function joinEvent(eventId) {
+      let token = localStorage.getItem('authToken');
+      
+      fetch('/api/events/' + eventId + '/join', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert(data.error);
+          } else {
+            alert('You joined the event!');
+            loadEventDetail();
+          }
+        })
+        .catch(err => {
+          console.log('error joining event', err);
+          alert('Error joining event');
+        });
+    }
+
+    function leaveEvent(eventId) {
+      let token = localStorage.getItem('authToken');
+      
+      fetch('/api/events/' + eventId + '/leave', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          alert('You left the event');
+          loadEventDetail();
+        })
+        .catch(err => {
+          console.log('error leaving event', err);
+          alert('Error leaving event');
+        });
+    }
+
+    function deleteEvent(eventId) {
+      if (confirm('Are you sure you want to delete this event?')) {
+        let token = localStorage.getItem('authToken');
+        
+        fetch('/api/events/' + eventId, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            alert('Event deleted');
+            window.location.href = 'index.html';
+          })
+          .catch(err => {
+            console.log('error deleting event', err);
+            alert('Error deleting event');
+          });
+      }
+    }
+
+    function editEvent(eventId) {
+      alert('Edit feature coming soon!');
+    }
+
+    function getCurrentUserId(token) {
+      if (!token) return null;
+      try {
+        let parts = token.split('.');
+        let payload = JSON.parse(atob(parts[1]));
+        return payload.id;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // load on page load
+    window.addEventListener('load', function() {
+      loadEventDetail();
+    });
+  </script>
+</body>
+</html>

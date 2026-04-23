@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Community Event Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #2d5f4f 0%, #4a7c67 100%);
+    }
+    
+    .auth-box {
+      background: white;
+      padding: 3rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .auth-box h1 {
+      text-align: center;
+      color: #2d5f4f;
+      margin-bottom: 1rem;
+      font-size: 2rem;
+    }
+    
+    .auth-box p {
+      text-align: center;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .form-group input {
+      padding: 0.9rem;
+      font-size: 1rem;
+    }
+    
+    .btn-submit {
+      padding: 0.9rem;
+      background-color: #2d5f4f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn-submit:hover {
+      background-color: #1d3d2f;
+    }
+    
+    .toggle-form {
+      text-align: center;
+      color: #666;
+      margin-top: 1.5rem;
+    }
+    
+    .toggle-form a {
+      color: #2d5f4f;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .toggle-form a:hover {
+      text-decoration: underline;
+    }
+    
+    .message {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    
+    .message.error {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border-left: 4px solid #dc2626;
+      display: block;
+    }
+    
+    .message.success {
+      background-color: #dcfce7;
+      color: #15803d;
+      border-left: 4px solid #15803d;
+      display: block;
+    }
+    
+    .role-select {
+      display: none;
+    }
+    
+    .role-select.show {
+      display: block;
+    }
+  </style>
+</head>
+<body style="background: linear-gradient(135deg, #2d5f4f 0%, #4a7c67 100%); margin: 0;">
+  <div class="auth-container">
+    <div class="auth-box">
+      <h1 id="title">🌱 Login</h1>
+      <p id="subtitle">Sign in to your account</p>
+      
+      <div id="messageBox" class="message"></div>
+      
+      <form id="authForm" class="auth-form">
+        <div class="form-group" id="nameGroup" style="display: none;">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="Your full name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="your@email.com" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+        
+        <div class="form-group role-select" id="roleGroup">
+          <label for="role">Account Type</label>
+          <select id="role" name="role" style="padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px;">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        
+        <button type="submit" class="btn-submit" id="submitBtn">Login</button>
+      </form>
+      
+      <div class="toggle-form">
+        <span id="toggleText">Don't have an account? <a onclick="toggleMode()">Register</a></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isLoginMode = true;
+    
+    function toggleMode() {
+      isLoginMode = !isLoginMode;
+      
+      if (isLoginMode) {
+        document.getElementById('title').textContent = '🌱 Login';
+        document.getElementById('subtitle').textContent = 'Sign in to your account';
+        document.getElementById('nameGroup').style.display = 'none';
+        document.getElementById('roleGroup').classList.remove('show');
+        document.getElementById('submitBtn').textContent = 'Login';
+        document.getElementById('toggleText').innerHTML = 'Don\'t have an account? <a onclick="toggleMode()">Register</a>';
+      } else {
+        document.getElementById('title').textContent = '🌱 Register';
+        document.getElementById('subtitle').textContent = 'Create a new account';
+        document.getElementById('nameGroup').style.display = 'block';
+        document.getElementById('roleGroup').classList.add('show');
+        document.getElementById('submitBtn').textContent = 'Register';
+        document.getElementById('toggleText').innerHTML = 'Already have an account? <a onclick="toggleMode()">Login</a>';
+      }
+      
+      clearForm();
+      clearMessage();
+    }
+    
+    function clearForm() {
+      document.getElementById('authForm').reset();
+    }
+    
+    function clearMessage() {
+      let messageBox = document.getElementById('messageBox');
+      messageBox.innerHTML = '';
+      messageBox.classList.remove('error', 'success');
+    }
+    
+    function showMessage(msg, type) {
+      let messageBox = document.getElementById('messageBox');
+      messageBox.innerHTML = msg;
+      messageBox.classList.remove('error', 'success');
+      messageBox.classList.add(type);
+    }
+    
+    document.getElementById('authForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      let email = document.getElementById('email').value;
+      let password = document.getElementById('password').value;
+      
+      // validate
+      if (!email || !password) {
+        showMessage('Please fill in all fields', 'error');
+        return;
+      }
+      
+      if (isLoginMode) {
+        // LOGIN
+        try {
+          let response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: email,
+              password: password
+            })
+          });
+          
+          let data = await response.json();
+          
+          if (!response.ok) {
+            showMessage(data.error || 'Login failed', 'error');
+            return;
+          }
+          
+          // save token
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('userRole', data.user.role);
+          localStorage.setItem('userName', data.user.name);
+          
+          showMessage('Login successful! Redirecting...', 'success');
+          
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+        } catch (err) {
+          console.log('login error', err);
+          showMessage('Error logging in. Please try again.', 'error');
+        }
+      } else {
+        // REGISTER
+        let name = document.getElementById('name').value;
+        let role = document.getElementById('role').value;
+        
+        if (!name) {
+          showMessage('Please enter your name', 'error');
+          return;
+        }
+        
+        try {
+          let response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: name,
+              email: email,
+              password: password,
+              role: role
+            })
+          });
+          
+          let data = await response.json();
+          
+          if (!response.ok) {
+            showMessage(data.error || 'Registration failed', 'error');
+            return;
+          }
+          
+          // save token
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('userRole', data.user.role);
+          localStorage.setItem('userName', data.user.name);
+          
+          showMessage('Registration successful! Redirecting...', 'success');
+          
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+        } catch (err) {
+          console.log('registration error', err);
+          showMessage('Error registering. Please try again.', 'error');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
